@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://gtv4ys1yx0rn"
+path="res://.godot/imported/river.glsl-f4044f80ef542d4b6d4b3042b32458ea.res"
+
+[deps]
+
+source_file="res://shaders/river.glsl"
+dest_files=["res://.godot/imported/river.glsl-f4044f80ef542d4b6d4b3042b32458ea.res"]
+
+[params]
+
