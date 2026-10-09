@@ -58,6 +58,7 @@ public static class Tooltips
 		["NEW LANDSCAPE"] = "Build a new landscape with the settings above and start the river again.",
 
 		// River
+		["Show the fall"] = "Draw the landscape tilted by its fall (exaggerated like the heights with Height x), so the water is seen running downhill. Off: the land is drawn flat and the fall is only a force.",
 		["Smooth the view"] = "Draws the ground and water a little smoothed, so the grid cells do not show as steps on steep banks (0 = the raw cells). Only the picture changes, not the simulation.",
 		["Landscape speed"] = "How much faster the landscape changes than the water flows (morphological acceleration). Real rivers take years to move; this lets you watch it in minutes. Too high and the ground changes in jumps (it is slowed automatically then).",
 		["Grain size"] = "Size of the sand and gravel grains in mm. Fine sand moves easily; coarse gravel needs fast water.",

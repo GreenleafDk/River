@@ -13,6 +13,7 @@ uniform float max_speed = 3.0;
 uniform float max_depth = 3.0;
 
 uniform float smooth_amt = 1.0;
+uniform float fall = 0.0;    // the general fall (fraction) when it is shown: heights drop by fall * x
 
 varying float depth;
 varying float speed;
@@ -59,10 +60,10 @@ void vertex() {
 	float zg = zsm(c, sz);
 	float e = eta(c, sz);
 	depth = s.y < 0.02 ? 0.0 : max(e - zg, s.y * 0.5);
-	VERTEX.y = s.y < 0.02 ? (zg - 0.08) * vscale : e * vscale;
+	VERTEX.y = ((s.y < 0.02 ? zg - 0.08 : e) - fall * VERTEX.x) * vscale;
 	float el = eta(c - ivec2(1, 0), sz), er = eta(c + ivec2(1, 0), sz);
 	float ed = eta(c - ivec2(0, 1), sz), eu = eta(c + ivec2(0, 1), sz);
-	NORMAL = normalize(vec3(-(er - el) * vscale / (2.0 * dx), 1.0, -(eu - ed) * vscale / (2.0 * dx)));
+	NORMAL = normalize(vec3(-((er - el) / (2.0 * dx) - fall) * vscale, 1.0, -(eu - ed) * vscale / (2.0 * dx)));
 }
 
 vec3 ramp(float t) {

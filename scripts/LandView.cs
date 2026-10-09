@@ -30,6 +30,14 @@ public partial class LandView : Node3D
 
 	public float Contour { set => _groundMat?.SetShaderParameter("contour", value); }
 
+	float _fall;
+	/// <summary>The general fall (fraction) drawn as a real tilt; 0 draws the land flat.</summary>
+	public float Fall
+	{
+		get => _fall;
+		set { _fall = value; _groundMat?.SetShaderParameter("fall", value); _waterMat?.SetShaderParameter("fall", value); }
+	}
+
 	float _smooth = 1f;
 	/// <summary>View-only smoothing of the cell heights (0 = raw cells, 1 = 3x3 Gaussian).</summary>
 	public float Smooth
@@ -54,6 +62,7 @@ public partial class LandView : Node3D
 			m.SetShaderParameter("vscale", _vscale);
 			m.SetShaderParameter("view_mode", _mode);
 			m.SetShaderParameter("smooth_amt", _smooth);
+			m.SetShaderParameter("fall", _fall);
 		}
 		_ground = new MeshInstance3D { Mesh = mesh, MaterialOverride = _groundMat, Name = "Ground" };
 		_water = new MeshInstance3D { Mesh = mesh, MaterialOverride = _waterMat, Name = "Water", CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -89,7 +98,7 @@ public partial class LandView : Node3D
 		var mesh = new ArrayMesh();
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 		// Heights are set in the shader: give the culling a box that holds any relief.
-		mesh.CustomAabb = new Aabb(new Vector3(0, -200, 0), new Vector3(nx * dx, 400, ny * dx));
+		mesh.CustomAabb = new Aabb(new Vector3(0, -50000, 0), new Vector3(nx * dx, 100000, ny * dx));   // also when the fall is shown
 		return mesh;
 	}
 }

@@ -34,7 +34,7 @@ public partial class Main : Node3D
 	string _shotPath = "";
 	int _shotIndex;
 	double _realTime, _nextPrint = 1;
-	bool _top, _noUi;
+	bool _top, _noUi, _showFall = true;
 	int _viewMode;
 	Vector3? _camArg;   // yaw, pitch, distance as a fraction of the length
 	readonly Dictionary<string, string> _sets = new();
@@ -85,6 +85,7 @@ public partial class Main : Node3D
 		_sim = new RiverSim(_land, _par);
 		_sim.Initialize();
 		_view.Build(_sim);
+		ApplyFall();
 		_sun.DirectionalShadowMaxDistance = _land.Length * 2f;
 		FitCamera();
 		GD.Print($"[river] {_land.Nx}x{_land.Ny} cells, dx {_land.Dx:F2} m, {_land.Length}x{_land.Width} m, slope {_land.SlopePercent}%, inlet depth {_sim.InletDepth():F2} m");
@@ -92,7 +93,7 @@ public partial class Main : Node3D
 
 	void FitCamera()
 	{
-		_target = new Vector3(_land.Length * 0.5f, 0, _land.Width * 0.5f);
+		_target = new Vector3(_land.Length * 0.5f, GroundY(_land.Length * 0.5f), _land.Width * 0.5f);
 		if (_top) { _yaw = 0; _pitch = 89.9f; _dist = Math.Max(_land.Length * 0.62f, _land.Width * 1.2f) / MathF.Tan(Mathf.DegToRad(25)) * 0.5f; }
 		else { _yaw = -30; _pitch = 32; _dist = _land.Length * 0.75f; }
 		if (_camArg is Vector3 c) { _yaw = c.X; _pitch = c.Y; _dist = c.Z * _land.Length; }
@@ -299,8 +300,11 @@ public partial class Main : Node3D
 		sim = default;
 		var from = _cam.ProjectRayOrigin(screen);
 		var dir = _cam.ProjectRayNormal(screen);
-		if (MathF.Abs(dir.Y) < 1e-4f) return false;
-		float t = -from.Y / dir.Y;
+		// The reference plane y = -k x (tilted when the fall is shown).
+		float k = _view.Fall * _view.VScale;
+		float den = dir.Y + k * dir.X;
+		if (MathF.Abs(den) < 1e-5f) return false;
+		float t = -(from.Y + k * from.X) / den;
 		if (t < 0) return false;
 		var p = from + dir * t;
 		sim = new Vector2(p.X, p.Z);
@@ -314,7 +318,7 @@ public partial class Main : Node3D
 		_brushRing.Visible = brushTool && hit;
 		if (hit)
 		{
-			_brushRing.Position = new Vector3(p.X, 0.5f, p.Y);
+			_brushRing.Position = new Vector3(p.X, GroundY(p.X) + 0.5f, p.Y);
 			_brushRing.Scale = new Vector3(_brushRadius, _brushRadius * 0.5f, _brushRadius);
 		}
 		if (!_painting || !brushTool || !hit || _sim == null) return;
@@ -330,6 +334,17 @@ public partial class Main : Node3D
 			case Tool.Water: _sim.Brush(p.X, p.Y, _brushRadius, 1f * s * delta, 4, 0); break;
 			case Tool.Dry: _sim.Brush(p.X, p.Y, _brushRadius, 2f * s * delta, 5, 0); break;
 		}
+	}
+
+	/// <summary>Drawn height of the flat reference plane at x (the fall, when it is shown).</summary>
+	float GroundY(float x) => -_view.Fall * _view.VScale * x;
+
+	void ApplyFall()
+	{
+		float old = GroundY(_target.X);
+		_view.Fall = _showFall ? _land.SlopePercent / 100f : 0f;
+		_target.Y += GroundY(_target.X) - old;   // keep looking at the same spot
+		if (_cam != null) UpdateCamera();
 	}
 
 	void SetRunning(bool on)

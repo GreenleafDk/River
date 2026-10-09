@@ -60,5 +60,8 @@ landscape days (90 s real at 200 steps/frame).
   zone P[46]), added to the v momentum and the bedload slope; `K_BED` relaxes the zone towards its target profile
   (P[47] `SideRise` m at the wall, P[48] `SideRecoverDays`), not mass conserving. "Hard ground at walls" = rock band
   at build time. A real raised edge alone was eroded away (user, 2026-10-09).
+- The fall is drawn as a tilt by default (`LandView.Fall`, shader `fall`: y = (z − S x)·vscale, View → "Show the fall";
+  camera target and brush picking use the tilted plane `GroundY`). The user found the flat view misleading on
+  steep land (water seemed to run uphill), 2026-10-09; the sim itself is unchanged.
 - View smoothing (`LandView.Smooth`, shader `smooth_amt`, default 1): 5x5 binomial heights for ground, wet-only
   average for the water surface. Bed smoothing under water (P[38]) damps grid-sized pits.

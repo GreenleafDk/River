@@ -65,6 +65,7 @@ public partial class Main
 		var fall = Slider(0, 1, Math.Log(_land.SlopePercent / FallMin) / Math.Log(FallMax / FallMin), 0.001f, t =>
 		{
 			_land.SlopePercent = (float)(FallMin * Math.Pow(FallMax / FallMin, t));
+			ApplyFall();
 			_fallLabel.Text = FallText();
 			_sim?.UploadParams();
 		}, 130);
@@ -79,7 +80,13 @@ public partial class Main
 			_sim?.UploadParams();
 		}, 130), "Water"));
 		bar.AddChild(Tip(Small("Height x"), "Height x"));
-		bar.AddChild(Tip(Slider(1, 20, _view.VScale, 0.5f, v => _view.VScale = v, 110), "Height x"));
+		bar.AddChild(Tip(Slider(1, 20, _view.VScale, 0.5f, v =>
+		{
+			float old = GroundY(_target.X);
+			_view.VScale = v;
+			_target.Y += GroundY(_target.X) - old;   // the tilt scales with the heights: keep the camera on the land
+			UpdateCamera();
+		}, 110), "Height x"));
 
 		// Tool column.
 		var tools = new PanelContainer();
@@ -186,6 +193,7 @@ public partial class Main
 
 		b.AddChild(new Label { Text = "VIEW", ThemeTypeVariation = "HeaderLabel" });
 		AddSlider(b, "Smooth the view", "", 0, 1, _view.Smooth, v => _view.Smooth = v);
+		AddCheck(b, "Show the fall", _showFall, on => { _showFall = on; ApplyFall(); });
 		b.AddChild(new HSeparator());
 
 		b.AddChild(new Label { Text = "RIVER", ThemeTypeVariation = "HeaderLabel" });

@@ -13,6 +13,7 @@ uniform float dx = 2.0;
 uniform int view_mode = 0;   // 0 natural, 1 speed, 2 depth, 3 material
 uniform float contour = 0.0; // contour spacing in metres (0: none)
 uniform float smooth_amt = 1.0;
+uniform float fall = 0.0;    // the general fall (fraction) when it is shown: heights drop by fall * x
 
 varying vec4 s0;
 varying vec4 s1;
@@ -40,9 +41,9 @@ void vertex() {
 	float z = zsm(c, sz);
 	float zl = zsm(c - ivec2(1, 0), sz), zr = zsm(c + ivec2(1, 0), sz);
 	float zd = zsm(c - ivec2(0, 1), sz), zu = zsm(c + ivec2(0, 1), sz);
-	VERTEX.y = z * vscale;
-	wz = z;
-	NORMAL = normalize(vec3(-(zr - zl) * vscale / (2.0 * dx), 1.0, -(zu - zd) * vscale / (2.0 * dx)));
+	VERTEX.y = (z - fall * VERTEX.x) * vscale;
+	wz = z - fall * VERTEX.x;
+	NORMAL = normalize(vec3(-((zr - zl) / (2.0 * dx) - fall) * vscale, 1.0, -(zu - zd) * vscale / (2.0 * dx)));
 }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
