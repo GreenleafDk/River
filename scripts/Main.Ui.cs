@@ -171,14 +171,21 @@ public partial class Main
 		AddSlider(b, "Plants at start", "", 0, 1, _land.VegetationStart, v => _land.VegetationStart = v);
 		AddSlider(b, "Loose sand", "m", 0, 5, _land.LooseDepth, v => _land.LooseDepth = v);
 		AddCheck(b, "Periodic sides", _land.PeriodicSides, on => { _land.PeriodicSides = on; _sim?.UploadParams(); });
-		AddSlider(b, "Side slopes height", "m", 0, 10, _land.SideRise, v => _land.SideRise = v);
-		AddSlider(b, "Side slopes width", "%", 0, 30, _land.SideWidth, v => _land.SideWidth = v);
+		AddSlider(b, "Push from the walls", "%", 0, 10, _land.SidePush, v => { _land.SidePush = v; _sim?.UploadParams(); });
+		AddSlider(b, "Wall zone width", "%", 0, 30, _land.SideWidth, v => { _land.SideWidth = v; _sim?.UploadParams(); });
+		AddSlider(b, "Raised ground at walls", "m", 0, 10, _land.SideRise, v => { _land.SideRise = v; _sim?.UploadParams(); });
+		AddSlider(b, "Wall zone grows back in", "days", 0, 30, _land.SideRecoverDays, v => { _land.SideRecoverDays = v; _sim?.UploadParams(); });
+		AddCheck(b, "Hard ground at walls", _land.ProtectSides, on => _land.ProtectSides = on);
 		AddCheck(b, "Sea at the outlet (new landscape)", _land.Sea, on => { _land.Sea = on; NewSim(); });
 		AddSlider(b, "Sea level", "m", -3, 1, _land.SeaLevel, v => { _land.SeaLevel = v; _sim?.UploadParams(); });
 		AddSlider(b, "Sea share of length", "%", 5, 60, _land.SeaFraction * 100, v => _land.SeaFraction = v / 100);
 		var make = new Button { Text = "NEW LANDSCAPE", ThemeTypeVariation = "PrimaryButton", CustomMinimumSize = new Vector2(0, Touch) };
 		make.Pressed += NewSim;
 		b.AddChild(Tip(make, "NEW LANDSCAPE"));
+		b.AddChild(new HSeparator());
+
+		b.AddChild(new Label { Text = "VIEW", ThemeTypeVariation = "HeaderLabel" });
+		AddSlider(b, "Smooth the view", "", 0, 1, _view.Smooth, v => _view.Smooth = v);
 		b.AddChild(new HSeparator());
 
 		b.AddChild(new Label { Text = "RIVER", ThemeTypeVariation = "HeaderLabel" });

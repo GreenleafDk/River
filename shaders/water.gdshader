@@ -12,23 +12,54 @@ uniform int view_mode = 0;   // 0 natural, 1 speed, 2 depth, 3 material
 uniform float max_speed = 3.0;
 uniform float max_depth = 3.0;
 
+uniform float smooth_amt = 1.0;
+
 varying float depth;
 varying float speed;
 varying float conc;
 
+float zraw(ivec2 c, ivec2 sz) { return texelFetch(tex0, clamp(c, ivec2(0), sz - 1), 0).x; }
+
+// Ground as the terrain shader draws it (same 5x5 binomial blend).
+float zsm(ivec2 c, ivec2 sz) {
+	float z = zraw(c, sz);
+	if (smooth_amt <= 0.0) return z;
+	// 5x5 binomial (1 4 6 4 1)^2 / 256: wide enough to round off bank steps of several cells.
+	const float k[5] = float[5](1.0, 4.0, 6.0, 4.0, 1.0);
+	float s = 0.0;
+	for (int dj = -2; dj <= 2; dj++)
+		for (int di = -2; di <= 2; di++)
+			s += k[di + 2] * k[dj + 2] * zraw(c + ivec2(di, dj), sz);
+	return mix(z, s / 256.0, smooth_amt);
+}
+
+// Water surface smoothed over the wet cells only (dry neighbours would pull it down onto the land).
 float eta(ivec2 c, ivec2 sz) {
 	vec4 s = texelFetch(tex0, clamp(c, ivec2(0), sz - 1), 0);
-	return s.x + max(s.y, 0.0);
+	float e0 = s.x + max(s.y, 0.0);
+	if (smooth_amt <= 0.0 || s.y < 0.02) return e0;
+	float sum = 0.0, wsum = 0.0;
+	for (int dj = -1; dj <= 1; dj++)
+		for (int di = -1; di <= 1; di++) {
+			vec4 n = texelFetch(tex0, clamp(c + ivec2(di, dj), ivec2(0), sz - 1), 0);
+			if (n.y < 0.02) continue;
+			float w = (di == 0 ? 2.0 : 1.0) * (dj == 0 ? 2.0 : 1.0);
+			sum += w * (n.x + n.y);
+			wsum += w;
+		}
+	return mix(e0, sum / wsum, smooth_amt);
 }
 
 void vertex() {
 	ivec2 c = ivec2(UV + 0.5);
 	ivec2 sz = textureSize(tex0, 0);
 	vec4 s = texelFetch(tex0, c, 0);
-	depth = s.y;
 	speed = length(s.zw);
 	conc = texelFetch(tex1, c, 0).w;
-	VERTEX.y = (s.x + s.y) * vscale - (s.y < 0.01 ? 0.08 * vscale : 0.0);
+	float zg = zsm(c, sz);
+	float e = eta(c, sz);
+	depth = s.y < 0.02 ? 0.0 : max(e - zg, s.y * 0.5);
+	VERTEX.y = s.y < 0.02 ? (zg - 0.08) * vscale : e * vscale;
 	float el = eta(c - ivec2(1, 0), sz), er = eta(c + ivec2(1, 0), sz);
 	float ed = eta(c - ivec2(0, 1), sz), eu = eta(c + ivec2(0, 1), sz);
 	NORMAL = normalize(vec3(-(er - el) * vscale / (2.0 * dx), 1.0, -(eu - ed) * vscale / (2.0 * dx)));

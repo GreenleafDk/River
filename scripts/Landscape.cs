@@ -23,8 +23,11 @@ public sealed class Landscape
 	public float VegetationStart = 0.8f;
 	public float LooseDepth = 0f;     // loose sediment everywhere at the start (m)
 	public bool PeriodicSides = true; // the sides wrap around (a river leaving one side comes in at the other)
-	public float SideRise = 3f;       // without periodic sides: how high the ground rises towards the side walls (m)
+	public float SidePush = 1f;       // without periodic sides: fictive slope towards the middle near the walls (%), a force only
+	public float SideRise = 2f;       // ... target height of the wall zone at the wall (m): it grows back to this when dug into
+	public float SideRecoverDays = 3f; // ... how long the wall zone takes to grow back (landscape days, 0 = never)
 	public float SideWidth = 10f;     // ... over this share of the width at each side (%)
+	public bool ProtectSides = true;  // ... and that band is hard rock, so the river cannot erode into it
 	public bool Sea;                  // a sea at the outlet (fixed level): deltas
 	public float SeaFraction = 0.25f; // share of the length that is sea
 	public float SeaDepth = 4f;       // depth of the basin below the plain (m)
@@ -101,12 +104,15 @@ public sealed class Landscape
 				}
 				// Walls (sides not periodic): the ground rises towards both sides, so the river turns away instead of
 				// running along a wall and sticking to it.
-				if (!PeriodicSides && SideRise > 0 && SideWidth > 0)
+				float side = 0;   // 0 inside, up to 1 at a wall
+				if (!PeriodicSides && SideWidth > 0)
 				{
 					float edge = Math.Min(y, Width - y) / (Width * SideWidth / 100f);
-					if (edge < 1) { float k = 1 - edge; z += SideRise * k * k * (3 - 2 * k); }
+					if (edge < 1) { float k = 1 - edge; side = k * k * (3 - 2 * k); z += SideRise * side; }
 				}
 				float e = Math.Clamp(1f + Patchiness * 2f * N(patches, x, y), 0.2f, 1.5f);
+				// Protected sides: the band towards the walls turns to rock, so the river cannot cut into the side slopes.
+				if (ProtectSides && side > 0) e = e + (0.02f - e) * Math.Min(side * 2, 1);
 				if (Preset == 2)
 				{
 					float rk = N(rocks, x, y);
@@ -125,7 +131,7 @@ public sealed class Landscape
 				}
 				Z[c] = z;
 				Erod[c] = e;
-				Loose[c] = Sea && x > seaStart - ramp ? Math.Max(LooseDepth, 1f) : LooseDepth;
+				Loose[c] = Sea && x > seaStart - ramp ? Math.Max(LooseDepth, 1f) : ProtectSides && side > 0.25f ? 0 : LooseDepth;
 				Veg[c] = z > -0.2f && w <= 0 ? VegetationStart : 0;
 				Water[c] = w;
 			}

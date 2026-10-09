@@ -228,6 +228,10 @@ public sealed class RiverSim
 		p[36] = Land.Sea ? 1 : 0;
 		p[37] = Land.SeaLevel;
 		p[38] = Par.BedSmoothing * 1e-5f;
+		p[39] = Land.SidePush / 100f;
+		p[46] = Land.Width * Land.SideWidth / 100f;
+		p[47] = Land.SideRise;
+		p[48] = Land.SideRecoverDays * 86400f;
 		p[40] = _brush[0]; p[41] = _brush[1]; p[42] = _brush[2]; p[43] = _brush[3]; p[44] = _brush[4]; p[45] = _brush[5];
 		if (_rd != null && _params.IsValid) _rd.BufferUpdate(_params, 0, ParamCount * 4, Bytes(p));
 	}

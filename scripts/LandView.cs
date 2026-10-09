@@ -30,6 +30,14 @@ public partial class LandView : Node3D
 
 	public float Contour { set => _groundMat?.SetShaderParameter("contour", value); }
 
+	float _smooth = 1f;
+	/// <summary>View-only smoothing of the cell heights (0 = raw cells, 1 = 3x3 Gaussian).</summary>
+	public float Smooth
+	{
+		get => _smooth;
+		set { _smooth = value; _groundMat?.SetShaderParameter("smooth_amt", value); _waterMat?.SetShaderParameter("smooth_amt", value); }
+	}
+
 	public void Build(RiverSim sim)
 	{
 		foreach (var c in GetChildren()) c.QueueFree();
@@ -45,6 +53,7 @@ public partial class LandView : Node3D
 			m.SetShaderParameter("dx", sim.Dx);
 			m.SetShaderParameter("vscale", _vscale);
 			m.SetShaderParameter("view_mode", _mode);
+			m.SetShaderParameter("smooth_amt", _smooth);
 		}
 		_ground = new MeshInstance3D { Mesh = mesh, MaterialOverride = _groundMat, Name = "Ground" };
 		_water = new MeshInstance3D { Mesh = mesh, MaterialOverride = _waterMat, Name = "Water", CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };

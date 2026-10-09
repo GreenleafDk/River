@@ -96,6 +96,10 @@ layout(push_constant, std430) uniform PC {
 #define SEA      P[36]   // 1: a sea with a fixed level at the outlet
 #define SEA_LVL  P[37]   // its level, relative height at the outlet (m)
 #define BED_D    P[38]   // bed smoothing under water (m2/s, morph time)
+#define SIDE_S   P[39]   // walls: fictive slope towards the middle (fraction), like the fall it is a force, not a shape
+#define SIDE_W   P[46]   // ... over this distance from each wall (m)
+#define SIDE_RISE P[47]  // walls: target height of the wall zone at the wall (m)
+#define SIDE_T   P[48]   // ... time it takes to grow back to it (morph s, 0 = never)
 #define BR_X     P[40]
 #define BR_Y     P[41]
 #define BR_R     P[42]
@@ -145,6 +149,15 @@ float erodibility(vec4 b) {
 }
 
 float manningAt(vec4 b) { return MANNING + VEG_N * b.w; }
+
+// Walls only: d(fictive height)/dy at y. The fictive ground rises towards both walls (smoothly from SIDE_W in), so
+// water and sand are pushed back towards the middle without any real ridge that could be eroded away.
+float sideSlope(float y) {
+	if (PER || SIDE_S <= 0.0 || SIDE_W <= 0.0) return 0.0;
+	float w = float(NY) * DX;
+	float a = clamp(1.0 - y / SIDE_W, 0.0, 1.0), b = clamp(1.0 - (w - y) / SIDE_W, 0.0, 1.0);
+	return SIDE_S * (b * b - a * a);
+}
 
 void statMax(uint word, float v) { if (v > 0.0) atomicMax(stats[word], floatBitsToUint(v)); }
 
@@ -246,7 +259,7 @@ void main() {
 				if (j > 1 || PER) lap += vin[vid(i, j - 1)] - v0;
 				v += min(dt * EDDY / (DX * DX), 0.2) * lap;
 			}
-			v += dt * G * (-(eT - eB) / DX);
+			v += dt * G * (-(eT - eB) / DX - sideSlope(float(j) * DX));
 			float hf = v > 0.0 ? hB : hT;
 			if (hf < HMIN || max(eB, eT) - max(zB, zT) < HMIN) v = 0.0;
 			else {
@@ -410,7 +423,7 @@ void main() {
 	vec2 dir = vec2(d.x * cos(delta) - d.y * sin(delta), d.x * sin(delta) + d.y * cos(delta));
 	// Bed slope: grains roll downhill (Talmon-like 1/sqrt(theta) weight). Total slope includes the general fall.
 	float zE = bed[cid(i + 1, j)].x, zW = bed[cid(i - 1, j)].x, zN = bed[cid(i, j + 1)].x, zS = bed[cid(i, j - 1)].x;
-	vec2 grad = vec2((zE - zW) / (2.0 * DX) - SLOPE, (zN - zS) / (2.0 * DX));
+	vec2 grad = vec2((zE - zW) / (2.0 * DX) - SLOPE, (zN - zS) / (2.0 * DX) + sideSlope((float(j) + 0.5) * DX));
 	vec2 corr = SLOPE_B / sqrt(max(theta, 0.02)) * grad;
 	float cl = length(corr);
 	if (cl > 1.0) corr /= cl;
@@ -473,6 +486,19 @@ void main() {
 	vec4 b = bed[t];
 	b.x += dz;
 	b.y = max(b.y + dz, 0.0);
+	// Wall zone (walls only): the ground grows back towards its target profile (rising to SIDE_RISE at the wall),
+	// so a river that digs into it is slowly pushed out again. Fictive, like the push: no mass is conserved here.
+	if (!PER && SIDE_W > 0.0 && SIDE_T > 0.0) {
+		float y = (float(j) + 0.5) * DX, w = float(NY) * DX;
+		float edge = min(y, w - y) / SIDE_W;
+		if (edge < 1.0) {
+			float k = 1.0 - edge;
+			k = k * k * (3.0 - 2.0 * k);
+			float back = (SIDE_RISE * k - b.x) * min(pc.mdt / SIDE_T * k, 1.0);
+			b.x += back;
+			dz += back;
+		}
+	}
 	if (c.x > HMIN) c.x = max(c.x - dz, 0.0);   // the water column shrinks over a rising bed (and deepens over scour)
 	// Vegetation: grows on dry ground, drowns under deep or fast water, is torn out by fast bed change.
 	float h = c.x;
