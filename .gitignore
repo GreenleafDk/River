@@ -1,0 +1,9 @@
+.godot/
+.import/
+bin/
+obj/
+*.tmp
+out/
+artifacts/
+export/
+build/
