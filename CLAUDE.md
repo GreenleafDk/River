@@ -56,3 +56,9 @@ landscape days (90 s real at 200 steps/frame).
 - Tooltips for every control in `scripts/Tooltips.cs` (keyed by label/name); new controls need an entry.
 - Sediment feed default 0.75: 1.0 aggraded at the inlet into a braided fan; 0.5 incised a straight stable channel.
 - `tools/test.ps1` always re-imports the shaders (also with -NoBuild): stale SPIR-V cost a lot of confusion once.
+- Walls (periodic off): `sideSlope()` = fictive slope towards the middle in the wall zone (P[39] `SidePush` %,
+  zone P[46]), added to the v momentum and the bedload slope; `K_BED` relaxes the zone towards its target profile
+  (P[47] `SideRise` m at the wall, P[48] `SideRecoverDays`), not mass conserving. "Hard ground at walls" = rock band
+  at build time. A real raised edge alone was eroded away (user, 2026-10-09).
+- View smoothing (`LandView.Smooth`, shader `smooth_amt`, default 1): 5x5 binomial heights for ground, wet-only
+  average for the water surface. Bed smoothing under water (P[38]) damps grid-sized pits.
